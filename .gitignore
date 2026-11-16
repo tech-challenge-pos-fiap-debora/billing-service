@@ -31,3 +31,6 @@ lerna-debug.log*
 .DS_Store
 
 .env.localstack
+
+# SonarScanner local / CI
+.scannerwork/
