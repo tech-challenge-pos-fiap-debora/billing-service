@@ -1,0 +1,102 @@
+services:
+  billing:
+    image: tech-challenge-api:latest
+    pull_policy: never
+    container_name: billing
+    working_dir: /billing
+    user: root
+    command: sh -c "yarn install --ignore-engines && yarn migrate:up && node -r ts-node/register -r tsconfig-paths/register src/main.ts"
+    restart: unless-stopped
+    ports:
+      - '3004:3000'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@billing-postgres:5432/billing
+      - JWT_SECRET=${JWT_SECRET:-altere-este-segredo}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
+      - SERVICE_NAME=billing-service
+      - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME:-billing-service}
+      - NEW_RELIC_LABELS=${NEW_RELIC_LABELS:-service:billing-service;component:billing}
+      - NEW_RELIC_ENABLED=${NEW_RELIC_ENABLED:-false}
+      - STOCK_SERVICE_URL=http://host.docker.internal:3002
+      - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN:-}
+      - MP_SANDBOX=${MP_SANDBOX:-true}
+      - MP_FALLBACK_STUB=${MP_FALLBACK_STUB:-true}
+      - MP_WEBHOOK_SECRET=${MP_WEBHOOK_SECRET:-}
+      - MP_NOTIFICATION_URL=${MP_NOTIFICATION_URL:-}
+      - MP_SUCCESS_URL=${MP_SUCCESS_URL:-}
+      - MP_FAILURE_URL=${MP_FAILURE_URL:-}
+      - MP_PENDING_URL=${MP_PENDING_URL:-}
+      - MP_STATEMENT_DESCRIPTOR=${MP_STATEMENT_DESCRIPTOR:-OFICINA}
+      - PORT=3000
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_ENDPOINT_URL=http://billing-localstack:4566
+      - SNS_TOPIC_ARN=arn:aws:sns:us-east-1:000000000000:oficina-domain-events
+      - SNS_FANOUT_ENDPOINTS=http://order-localstack:4566,http://stock-localstack:4566,http://billing-localstack:4566
+      - SQS_QUEUE_URL=http://billing-localstack:4566/000000000000/billing-events
+    networks:
+      - oficina
+    volumes:
+      - .:/billing
+      - billing_node_modules:/billing/node_modules
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: billing-postgres
+    ports:
+      - '5435:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: billing
+    volumes:
+      - billing-postgresdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d billing']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - oficina
+
+  localstack:
+    image: localstack/localstack:4.3
+    container_name: billing-localstack
+    ports:
+      - '4566:4566'
+    environment:
+      - SERVICES=sns,sqs
+      - DEBUG=0
+      - AWS_DEFAULT_REGION=us-east-1
+      - OFICINA_QUEUE_NAME=billing-events
+    volumes:
+      - billing-localstack:/var/lib/localstack
+      - ./scripts/localstack-ready.sh:/etc/localstack/init/ready.d/10-oficina-sns-sqs.sh:ro
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:4566/_localstack/health']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    networks:
+      - oficina
+
+volumes:
+  billing-postgresdata:
+  billing_node_modules:
+  billing-localstack:
+
+networks:
+  oficina:
+    name: oficina-net
+    external: true

@@ -1,0 +1,2 @@
+export const BUDGET_REPOSITORY = Symbol('BUDGET_REPOSITORY');
+export const PAYMENT_REPOSITORY = Symbol('PAYMENT_REPOSITORY');
