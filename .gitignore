@@ -34,3 +34,5 @@ lerna-debug.log*
 
 # SonarScanner local / CI
 .scannerwork/
+.jest-cache/
+jest.cov-probe.cjs

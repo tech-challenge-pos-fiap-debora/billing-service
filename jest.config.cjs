@@ -1,10 +1,3 @@
-const domainCriticalGlobs = [
-  'src/billing/domain/entities/budget.ts',
-  'src/billing/domain/entities/payment.ts',
-  'src/billing/application/use-case/budget/generate-budget-from-event.ts',
-  'src/billing/application/use-case/budget/mark-budget-approved.ts',
-];
-
 module.exports = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
@@ -12,7 +5,35 @@ module.exports = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
-  collectCoverageFrom: domainCriticalGlobs,
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.spec.ts',
+    '!src/main.ts',
+    '!src/**/*.module.ts',
+    '!src/**/*.dto.ts',
+    '!src/**/*.port.ts',
+    '!src/**/*.entity.ts',
+    '!src/**/index.ts',
+    '!src/**/tokens.ts',
+    '!src/**/*.inputs.ts',
+    '!src/**/authenticated-user.ts',
+    '!src/**/jwt-payload.ts',
+    '!src/**/service-identity.ts',
+    '!src/**/pino-logger.config.ts',
+    '!src/**/noop-*.ts',
+    // wiring Nest / TypeORM — cobertos por integração
+    '!src/**/typeorm-*.repository.ts',
+    '!src/**/configure-http-app.ts',
+    '!src/**/health.controller.ts',
+    '!src/**/telemetry.interceptor.ts',
+    '!src/**/domain-exception.filter.ts',
+    '!src/**/new-relic-telemetry.adapter.ts',
+    '!src/**/budget.controller.ts',
+    '!src/**/payment.controller.ts',
+    '!src/**/guards/**',
+    '!src/**/strategies/**',
+    '!src/**/decorators/**',
+  ],
   coveragePathIgnorePatterns: ['\\.spec\\.ts$'],
   coverageDirectory: 'coverage',
   testEnvironment: 'node',

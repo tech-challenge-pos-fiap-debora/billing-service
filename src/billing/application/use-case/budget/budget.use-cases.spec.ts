@@ -1,5 +1,8 @@
 import { GenerateBudgetFromEventUseCase } from './generate-budget-from-event';
 import { MarkBudgetApprovedUseCase } from './mark-budget-approved';
+import { MarkBudgetRejectedUseCase } from './mark-budget-rejected';
+import { CancelBudgetUseCase } from './cancel-budget';
+import { GetBudgetUseCase } from './get-budget';
 import { Budget } from '../../../domain/entities/budget';
 import { BudgetStatus } from '../../../domain/entities/budget-status';
 import type { BudgetRepositoryInterface } from '../../../domain/repositories/budget.repository';
@@ -170,5 +173,60 @@ describe('budget use cases', () => {
     await expect(useCase.execute('os-b', budget.id)).rejects.toThrow(
       /does not belong/,
     );
+  });
+
+  it('rejeita e cancela orçamento', async () => {
+    const repo = memoryBudgetRepo();
+    const pending = Budget.create({
+      serviceOrderId: 'os-r',
+      correlationId: 'os-r',
+      items: [],
+      servicesTotal: 1,
+      partsTotal: 0,
+      total: 1,
+      client,
+    });
+    await repo.create(pending);
+    const rejected = await new MarkBudgetRejectedUseCase(repo).execute(
+      'os-r',
+      'cliente recusou',
+    );
+    expect(rejected.status).toBe(BudgetStatus.REJECTED);
+
+    const approved = Budget.create({
+      serviceOrderId: 'os-c',
+      correlationId: 'os-c',
+      items: [],
+      servicesTotal: 1,
+      partsTotal: 0,
+      total: 1,
+      client,
+    });
+    approved.approve();
+    await repo.create(approved);
+    const cancelled = await new CancelBudgetUseCase(repo).execute(
+      'os-c',
+      'OS cancelada',
+    );
+    expect(cancelled?.status).toBe(BudgetStatus.CANCELLED);
+    expect(await new CancelBudgetUseCase(repo).execute('missing')).toBeNull();
+  });
+
+  it('GetBudget busca por id e por OS', async () => {
+    const repo = memoryBudgetRepo();
+    const budget = Budget.create({
+      serviceOrderId: 'os-g',
+      correlationId: 'os-g',
+      items: [],
+      servicesTotal: 1,
+      partsTotal: 0,
+      total: 1,
+      client,
+    });
+    await repo.create(budget);
+    const useCase = new GetBudgetUseCase(repo);
+    expect((await useCase.byId(budget.id)).id).toBe(budget.id);
+    expect((await useCase.byServiceOrderId('os-g')).id).toBe(budget.id);
+    await expect(useCase.byId('missing')).rejects.toThrow(/not found/i);
   });
 });

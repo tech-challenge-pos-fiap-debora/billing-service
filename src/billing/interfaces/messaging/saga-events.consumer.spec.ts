@@ -85,4 +85,44 @@ describe('SagaEventsConsumer (billing)', () => {
     );
     expect(generateBudget.execute).not.toHaveBeenCalled();
   });
+
+  it('despacha approved, rejected, reservation.failed e cancelled', async () => {
+    const consumer = build();
+    await consumer.handleRaw(
+      JSON.stringify({
+        type: 'order.budget.approved',
+        correlationId: 'os-1',
+        payload: { serviceOrderId: 'os-1', budgetId: 'b1' },
+      }),
+    );
+    expect(markApproved.execute).toHaveBeenCalledWith('os-1', 'b1');
+
+    await consumer.handleRaw(
+      JSON.stringify({
+        type: 'order.budget.rejected',
+        correlationId: 'os-1',
+        payload: { serviceOrderId: 'os-1', reason: 'nope', budgetId: 'b1' },
+      }),
+    );
+    expect(markRejected.execute).toHaveBeenCalledWith('os-1', 'nope', 'b1');
+
+    await consumer.handleRaw(
+      JSON.stringify({
+        type: 'stock.reservation.failed',
+        correlationId: 'os-1',
+        payload: { serviceOrderId: 'os-1', reason: 'sem estoque' },
+      }),
+    );
+    expect(cancelBudget.execute).toHaveBeenCalledWith('os-1', 'sem estoque');
+
+    await consumer.handleRaw(
+      JSON.stringify({
+        type: 'order.cancelled',
+        correlationId: 'os-1',
+        payload: { serviceOrderId: 'os-1', reason: 'cliente' },
+      }),
+    );
+    expect(cancelBudget.execute).toHaveBeenCalledWith('os-1', 'cliente');
+    expect(refundPayment.byServiceOrderId).toHaveBeenCalledWith('os-1');
+  });
 });
