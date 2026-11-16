@@ -82,4 +82,21 @@ describe('MercadoPagoWebhookController', () => {
     await controller.handle({}, 'topic_payment', 'ipn-7');
     expect(handleNotification.execute).toHaveBeenCalledWith('ipn-7');
   });
+
+  it('retorna ok sem id e exige headers quando há secret', async () => {
+    const controller = new MercadoPagoWebhookController(
+      handleNotification as never,
+      configWith({}),
+    );
+    expect(await controller.handle({ type: 'payment' })).toEqual({ ok: true });
+    expect(handleNotification.execute).not.toHaveBeenCalled();
+
+    const secured = new MercadoPagoWebhookController(
+      handleNotification as never,
+      configWith({ MP_WEBHOOK_SECRET: 'sec' }),
+    );
+    await expect(
+      secured.handle({ type: 'payment', data: { id: '1' } }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
 });

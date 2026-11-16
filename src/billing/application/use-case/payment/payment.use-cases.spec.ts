@@ -359,6 +359,86 @@ describe('payment use cases', () => {
     expect(published[0]?.type).toBe('billing.payment.failed');
   });
 
+  it('notificação idempotente se já confirmado e ignora pending', async () => {
+    const confirmed = Payment.create({
+      budgetId: 'b1',
+      serviceOrderId: 'os-1',
+      correlationId: 'os-1',
+      amount: 50,
+    });
+    confirmed.confirm('mp-ok');
+    const pending = Payment.create({
+      budgetId: 'b1',
+      serviceOrderId: 'os-1',
+      correlationId: 'os-1',
+      amount: 50,
+    });
+    const published: Array<{ type: string }> = [];
+    const events = {
+      async publish(e: { type: string }) {
+        published.push(e);
+      },
+    };
+
+    const confirmedCase = new HandlePaymentNotificationUseCase(
+      memoryPayments([confirmed]),
+      {
+        async getPayment() {
+          return {
+            providerPaymentId: 'mp-ok',
+            status: 'approved',
+            externalReference: confirmed.id,
+          };
+        },
+        createCheckout: jest.fn(),
+        findPaymentByExternalReference: jest.fn(),
+        refund: jest.fn(),
+        verifyConnection: jest.fn(),
+      },
+      events,
+    );
+    expect((await confirmedCase.execute('mp-ok'))?.status).toBe(
+      PaymentStatus.CONFIRMED,
+    );
+    expect(published).toHaveLength(0);
+
+    const pendingCase = new HandlePaymentNotificationUseCase(
+      memoryPayments([pending]),
+      {
+        async getPayment() {
+          return {
+            providerPaymentId: 'mp-p',
+            status: 'pending',
+            externalReference: pending.id,
+          };
+        },
+        createCheckout: jest.fn(),
+        findPaymentByExternalReference: jest.fn(),
+        refund: jest.fn(),
+        verifyConnection: jest.fn(),
+      },
+      events,
+    );
+    expect((await pendingCase.execute('mp-p'))?.status).toBe(
+      PaymentStatus.PENDING,
+    );
+
+    const noRef = new HandlePaymentNotificationUseCase(
+      memoryPayments(),
+      {
+        async getPayment() {
+          return { providerPaymentId: 'x', status: 'approved' };
+        },
+        createCheckout: jest.fn(),
+        findPaymentByExternalReference: jest.fn(),
+        refund: jest.fn(),
+        verifyConnection: jest.fn(),
+      },
+      events,
+    );
+    expect(await noRef.execute('x')).toBeNull();
+  });
+
   it('GetPayment busca por id e por OS', async () => {
     const payment = Payment.create({
       budgetId: 'b1',

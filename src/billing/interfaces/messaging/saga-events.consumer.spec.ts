@@ -86,6 +86,21 @@ describe('SagaEventsConsumer (billing)', () => {
     expect(generateBudget.execute).not.toHaveBeenCalled();
   });
 
+  it('usa motivo padrão quando reservation.failed não traz reason', async () => {
+    const consumer = build();
+    await consumer.handleRaw(
+      JSON.stringify({
+        type: 'stock.reservation.failed',
+        correlationId: 'os-1',
+        payload: { serviceOrderId: 'os-1' },
+      }),
+    );
+    expect(cancelBudget.execute).toHaveBeenCalledWith(
+      'os-1',
+      'Falha na reserva de estoque',
+    );
+  });
+
   it('despacha approved, rejected, reservation.failed e cancelled', async () => {
     const consumer = build();
     await consumer.handleRaw(
