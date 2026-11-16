@@ -5,6 +5,7 @@ import {
   ReceiveMessageCommand,
   SQSClient,
 } from '@aws-sdk/client-sqs';
+import { awsClientOptions } from '../../../shared/infrastructure/messaging/aws-client.factory';
 import { GenerateBudgetFromEventUseCase } from '../../application/use-case/budget';
 import { MarkBudgetApprovedUseCase } from '../../application/use-case/budget/mark-budget-approved';
 import { MarkBudgetRejectedUseCase } from '../../application/use-case/budget/mark-budget-rejected';
@@ -41,13 +42,8 @@ export class SagaEventsConsumer implements OnModuleInit, OnModuleDestroy {
     private readonly createPayment: CreatePaymentFromReservationUseCase,
     private readonly refundPayment: RefundPaymentUseCase,
   ) {
-    const region = this.config.get<string>('AWS_REGION') || 'us-east-1';
-    const endpoint = this.config.get<string>('AWS_ENDPOINT_URL') || undefined;
     this.queueUrl = this.config.get<string>('SQS_QUEUE_URL') || '';
-    this.client = new SQSClient({
-      region,
-      ...(endpoint ? { endpoint } : {}),
-    });
+    this.client = new SQSClient(awsClientOptions(this.config));
   }
 
   onModuleInit(): void {
@@ -191,6 +187,17 @@ export class SagaEventsConsumer implements OnModuleInit, OnModuleDestroy {
           correlationId: event.correlationId,
           causationId: event.eventId,
         });
+        break;
+      }
+      case 'stock.reservation.failed': {
+        const payload = event.payload as {
+          serviceOrderId: string;
+          reason?: string;
+        };
+        await this.cancelBudget.execute(
+          payload.serviceOrderId,
+          payload.reason ?? 'Falha na reserva de estoque',
+        );
         break;
       }
       case 'order.cancelled': {

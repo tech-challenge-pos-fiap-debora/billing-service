@@ -59,6 +59,24 @@ export class CreatePaymentFromReservationUseCase {
       this.logger.log(
         `active payment already exists paymentId=${existing.id} budgetId=${budget.id}`,
       );
+      // republish para order marcar WAITING_PAYMENT (idempotência da saga)
+      await this.events.publish({
+        eventId: randomUUID(),
+        type: 'billing.payment.created',
+        version: 1,
+        occurredAt: new Date().toISOString(),
+        correlationId: input.correlationId,
+        causationId: input.causationId,
+        producer: 'billing-service',
+        payload: {
+          paymentId: existing.id,
+          budgetId: existing.budgetId,
+          serviceOrderId: existing.serviceOrderId,
+          amount: existing.amount,
+          checkoutUrl: existing.checkoutUrl,
+          expiresAt: existing.expiresAt?.toISOString(),
+        },
+      });
       return existing;
     }
 
