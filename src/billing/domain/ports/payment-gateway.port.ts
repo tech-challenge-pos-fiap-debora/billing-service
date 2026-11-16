@@ -1,0 +1,39 @@
+export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');
+
+export type CreateCheckoutInput = {
+  paymentId: string;
+  correlationId: string;
+  serviceOrderId: string;
+  amount: number;
+  description: string;
+  payerEmail: string;
+  payerName: string;
+  expiresAt?: Date;
+};
+
+export type CreateCheckoutResult = {
+  preferenceId: string;
+  checkoutUrl: string;
+  expiresAt?: Date;
+};
+
+export type GatewayPaymentStatus =
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+  | 'pending'
+  | 'in_process'
+  | 'unknown';
+
+export type GatewayPaymentLookup = {
+  providerPaymentId: string;
+  status: GatewayPaymentStatus;
+  externalReference?: string;
+  amount?: number;
+};
+
+export interface PaymentGatewayPort {
+  createCheckout(input: CreateCheckoutInput): Promise<CreateCheckoutResult>;
+  getPayment(providerPaymentId: string): Promise<GatewayPaymentLookup>;
+  refund(providerPaymentId: string): Promise<void>;
+}
