@@ -32,8 +32,22 @@ export type GatewayPaymentLookup = {
   amount?: number;
 };
 
+export type GatewayConnectionStatus = {
+  configured: boolean;
+  mode: 'live' | 'sandbox' | 'stub';
+  ok: boolean;
+  collectorId?: string;
+  nickname?: string;
+  email?: string;
+  detail?: string;
+};
+
 export interface PaymentGatewayPort {
   createCheckout(input: CreateCheckoutInput): Promise<CreateCheckoutResult>;
   getPayment(providerPaymentId: string): Promise<GatewayPaymentLookup>;
+  findPaymentByExternalReference(
+    externalReference: string,
+  ): Promise<GatewayPaymentLookup | null>;
   refund(providerPaymentId: string): Promise<void>;
+  verifyConnection(): Promise<GatewayConnectionStatus>;
 }
