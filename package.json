@@ -1,7 +1,7 @@
 {
   "name": "billing-service",
   "version": "0.0.1",
-  "description": "Microsserviço de orçamento e pagamento (Mercado Pago).",
+  "description": "Microsservi\u00e7o de or\u00e7amento e pagamento (Mercado Pago).",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
@@ -20,7 +20,12 @@
     "test:integration": "NEW_RELIC_ENABLED=false jest --config ./test/jest-integration.json",
     "test:integration:docker": "sh -c 'docker compose up -d postgres || exit 1; for i in 1 2 3 4 5 6 7 8 9 10; do docker compose exec -T postgres pg_isready -U postgres -d billing && break; sleep 2; done; INTEGRATION_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5435/billing yarn test:integration; ec=$?; docker compose stop postgres; exit $ec'",
     "test:unit:docker": "docker compose run --rm --no-deps billing yarn test",
-    "migrate:up": "node scripts/run-migrations.mjs"
+    "migrate:up": "node scripts/run-migrations.mjs",
+    "localstack:up": "docker compose up -d localstack",
+    "localstack:init": "sh scripts/localstack-init.sh",
+    "messaging:smoke": "node scripts/messaging-smoke.mjs",
+    "mp:connection": "node scripts/mp-connection-smoke.mjs",
+    "test:bdd": "jest --config ./test/jest-bdd.config.cjs --runInBand"
   },
   "dependencies": {
     "@aws-sdk/client-sns": "^3.901.0",
@@ -63,6 +68,7 @@
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^17.0.0",
     "jest": "^30.3.0",
+    "jest-cucumber": "^4.5.0",
     "pino-pretty": "^13.1.3",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
