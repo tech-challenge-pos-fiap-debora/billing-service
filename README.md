@@ -61,17 +61,33 @@ Consome SQS `billing-events` (assinatura SNS `oficina-domain-events`) e publica 
 ## Rodando local
 
 ```bash
+docker network create oficina-net 2>/dev/null || true
 cp .env.example .env
-docker compose up -d postgres        # Postgres em localhost:5435
-yarn migrate:up
-yarn start:dev                       # API em http://localhost:3000 (compose: 3004)
+docker compose up -d          # billing :3004, postgres :5435, billing-localstack :4566
 ```
 
-Sem `MP_ACCESS_TOKEN`, o gateway usa stub (lab). Sem `SNS_TOPIC_ARN` / `SQS_QUEUE_URL`, publisher e consumer ficam noop/desligados.
+Sem `MP_ACCESS_TOKEN`, o gateway usa stub (lab). Lab completo (4 MS): [`../README.md`](../README.md).
+
+### Filas AWS no local (LocalStack deste domínio)
+
+O compose sobe `billing-localstack` (host **4566**) com init `scripts/localstack-ready.sh`:
+- topic SNS `oficina-domain-events` (**AllowPublishers** + **AllowQueueSubscriptions**)
+- fila `billing-events` (**AllowSnsDelivery** + **AllowConsumers**)
+- subscription com **FilterPolicy** nos tipos que o billing consome
+
+O app publica nos 3 LocalStacks (`SNS_FANOUT_ENDPOINTS`). Sem `SNS_TOPIC_ARN`, publisher noop; sem `SQS_QUEUE_URL`, consumer não sobe.
+
+No host (API fora do compose):
+```bash
+yarn localstack:up && yarn localstack:init
+set -a; source .env.localstack; set +a
+yarn messaging:smoke
+yarn start:dev
+```
 
 Swagger: `/api`. Health: `/health/live`, `/health/ready`.
 
-Testes: `yarn test` e `yarn test:integration:docker`.
+Testes: `yarn test`, `yarn test:bdd` (fluxo saga) e `yarn test:integration:docker`.
 
 ## CI/CD (AWS)
 
