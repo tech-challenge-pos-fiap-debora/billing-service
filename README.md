@@ -105,3 +105,7 @@ Detalhes: [`infra/README.md`](infra/README.md).
 ## Observabilidade
 
 Filtro: `service = 'billing-service'` (componente `billing`). Eventos de saga carregam `correlationId`.
+
+## Sonar
+<img width="1440" height="660" alt="image" src="https://github.com/user-attachments/assets/26eb62fe-2134-4561-b36c-577b45601769" />
+
